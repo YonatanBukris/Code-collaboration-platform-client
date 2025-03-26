@@ -21,7 +21,9 @@ const CodeEditor = ({ code, onChange, readOnly = false }) => {
         const position = editor.getPosition();
         
         // עדכון הקוד
-        editor.setValue(code);
+        editor.setValue(code, {
+          preserveCursor: true  // שומר על מיקום הסמן
+        });
         
         // החזרת הסמן למיקום המקורי (אם העורך אינו לקריאה בלבד)
         if (position && !readOnly) {
