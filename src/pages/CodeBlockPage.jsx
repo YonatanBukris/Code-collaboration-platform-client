@@ -27,18 +27,6 @@ const CodeBlockPage = () => {
     mentorConnected: false
   })
  
-  // רפרנס לפונקציה מושהית לשליחת שינויי קוד
-  const debouncedCodeEmit = useRef(
-    debounce((codeBlockId, code) => {
-      if (socketService.socket) {
-        socketService.socket.emit('code-change', { 
-          codeBlockId, 
-          code 
-        });
-      }
-    }, 100) // 300ms של השהייה
-  ).current;
-
   // רפרנס לפונקציה מושהית לשליחת שינויי רמזים
   const debouncedHintsEmit = useRef(
     debounce((codeBlockId, hints) => {
@@ -48,7 +36,7 @@ const CodeBlockPage = () => {
           hints 
         });
       }
-    }, 300) // 300ms של השהייה
+    }, 500) // שומרים על debounce של 500ms לרמזים
   ).current;
 
   // טיפול בסגירת חלון או רענון דף
@@ -137,7 +125,13 @@ const CodeBlockPage = () => {
       setIsSolutionMatch(false);
     }
 
-    debouncedCodeEmit(id, newCode);
+    // שליחת העדכון לשרת מיידית (ללא debounce)
+    if (socketService.socket) {
+      socketService.socket.emit('code-change', {
+        codeBlockId: id,
+        code: newCode
+      });
+    }
   }
 
   // האזנה לשינויי קוד
