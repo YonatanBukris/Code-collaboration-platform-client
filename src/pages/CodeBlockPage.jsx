@@ -7,19 +7,7 @@ import HintsPanel from '../components/code/HintsPanel'
 import CodeSection from '../components/code/CodeSection'
 import { codeBlockApi } from '../server/api'
 import socketService from '../services/socketService'
-
-// פונקציית עזר להשהיית קריאות תכופות
-const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
+import { debounce } from '../utils/debounce'
 
 const CodeBlockPage = () => {
   const { id } = useParams()
@@ -46,6 +34,18 @@ const CodeBlockPage = () => {
         socketService.socket.emit('code-change', { 
           codeBlockId, 
           code 
+        });
+      }
+    }, 300) // 300ms של השהייה
+  ).current;
+
+  // רפרנס לפונקציה מושהית לשליחת שינויי רמזים
+  const debouncedHintsEmit = useRef(
+    debounce((codeBlockId, hints) => {
+      if (socketService.socket) {
+        socketService.socket.emit('hints-change', { 
+          codeBlockId, 
+          hints 
         });
       }
     }, 300) // 300ms של השהייה
@@ -198,7 +198,7 @@ const CodeBlockPage = () => {
           hints={hints}
           onHintsChange={(newHints) => {
             setHints(newHints);
-            socketService.sendHints(id, newHints);
+            debouncedHintsEmit(id, newHints);
           }}
           show={showHints}
         />

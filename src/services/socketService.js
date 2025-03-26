@@ -49,7 +49,6 @@ class SocketService {
     }
   }   
 
-  // שליחת רמזים חדשים
   sendHints(codeBlockId, hints) {
     if (this.socket) {
       this.socket.emit('hints-change', { codeBlockId, hints });

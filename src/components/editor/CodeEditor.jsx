@@ -1,9 +1,9 @@
-import { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { Editor } from '@monaco-editor/react'
 
 const CodeEditor = ({ code, onChange, readOnly = false }) => {
   const editorRef = useRef(null);
-  const prevCodeRef = useRef(code);
+  const [localCode, setLocalCode] = useState(code);
 
   // שמירת רפרנס לעורך הקוד כשהוא נטען
   const handleEditorDidMount = (editor) => {
@@ -12,36 +12,36 @@ const CodeEditor = ({ code, onChange, readOnly = false }) => {
 
   // טיפול בעדכון קוד חיצוני תוך שמירה על מיקום הסמן
   useEffect(() => {
-    if (editorRef.current && code !== prevCodeRef.current) {
-      const model = editorRef.current.getModel();
-      
+    if (editorRef.current && code !== localCode) {
+      const editor = editorRef.current;
+      const model = editor.getModel();
+
       if (model) {
         // שמירת מיקום הסמן הנוכחי
-        const selection = editorRef.current.getSelection();
-        const position = editorRef.current.getPosition();
-        
-        // בצע את העדכון
-        const range = model.getFullModelRange();
-        const op = { range, text: code, forceMoveMarkers: true };
-        model.pushEditOperations([], [op], () => null);
-        
+        const selection = editor.getSelection();
+        const position = editor.getPosition();
+
+        // בצע את העדכון בצורה יציבה יותר
+        model.setValue(code);
+
         // החזר את הסמן למיקום המקורי אם אפשרי
         if (position && !readOnly) {
-          editorRef.current.setPosition(position);
+          editor.setPosition(position);
           if (selection) {
-            editorRef.current.setSelection(selection);
+            editor.setSelection(selection);
           }
         }
+
+        setLocalCode(code);
       }
-      
-      prevCodeRef.current = code;
     }
   }, [code, readOnly]);
 
+  // טיפול בשינויים בעורך
   const handleEditorChange = (value) => {
-    if (value !== code) {
+    if (value !== localCode) {
+      setLocalCode(value);
       onChange(value);
-      prevCodeRef.current = value;
     }
   };
 
@@ -50,7 +50,7 @@ const CodeEditor = ({ code, onChange, readOnly = false }) => {
       <Editor
         height="100%"
         defaultLanguage="javascript"
-        value={code}
+        value={localCode}
         onChange={handleEditorChange}
         onMount={handleEditorDidMount}
         options={{
@@ -64,11 +64,16 @@ const CodeEditor = ({ code, onChange, readOnly = false }) => {
           scrollbar: {
             vertical: 'visible',
             horizontal: 'visible'
-          }
+          },
+          // הוספת אפשרויות לשיפור חווית ההקלדה
+          quickSuggestions: true,
+          snippetSuggestions: 'top',
+          acceptSuggestionOnCommitCharacter: true,
+          acceptSuggestionOnEnter: 'on'
         }}
       />
     </div>
   )
 }
 
-export default CodeEditor 
+export default CodeEditor
