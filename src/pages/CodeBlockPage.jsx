@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Loading from '../components/common/Loading'
 import ActionButtons from '../components/code/ActionButtons'
@@ -7,6 +7,19 @@ import HintsPanel from '../components/code/HintsPanel'
 import CodeSection from '../components/code/CodeSection'
 import { codeBlockApi } from '../server/api'
 import socketService from '../services/socketService'
+
+// פונקציית עזר להשהיית קריאות תכופות
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 
 const CodeBlockPage = () => {
   const { id } = useParams()
@@ -26,7 +39,32 @@ const CodeBlockPage = () => {
     mentorConnected: false
   })
  
-  
+  // רפרנס לפונקציה מושהית לשליחת שינויי קוד
+  const debouncedCodeEmit = useRef(
+    debounce((codeBlockId, code) => {
+      if (socketService.socket) {
+        socketService.socket.emit('code-change', { 
+          codeBlockId, 
+          code 
+        });
+      }
+    }, 300) // 300ms של השהייה
+  ).current;
+
+  // טיפול בסגירת חלון או רענון דף
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // ניתוק מהסשן לפני סגירת הדף
+      socketService.leaveCodeBlock(id);
+      socketService.disconnect();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [id]);
 
   useEffect(() => {
     let mounted = true
@@ -99,12 +137,7 @@ const CodeBlockPage = () => {
       setIsSolutionMatch(false);
     }
 
-    if (socketService.socket) {
-        socketService.socket.emit('code-change', { 
-            codeBlockId: id, 
-            code: newCode 
-        });
-    }
+    debouncedCodeEmit(id, newCode);
   }
 
   // האזנה לשינויי קוד
