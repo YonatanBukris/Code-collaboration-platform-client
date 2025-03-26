@@ -6,7 +6,7 @@ import SessionHeader from '../components/code/SessionHeader'
 import HintsPanel from '../components/code/HintsPanel'
 import CodeSection from '../components/code/CodeSection'
 import { codeBlockApi } from '../server/api'
-import { socketService } from '../services/socketService'
+import socketService from '../services/socketService'
 
 const CodeBlockPage = () => {
   const { id } = useParams()
