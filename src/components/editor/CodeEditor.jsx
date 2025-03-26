@@ -1,48 +1,42 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Editor } from '@monaco-editor/react'
 
 const CodeEditor = ({ code, onChange, readOnly = false }) => {
   const editorRef = useRef(null);
-  const [localCode, setLocalCode] = useState(code);
 
   // שמירת רפרנס לעורך הקוד כשהוא נטען
   const handleEditorDidMount = (editor) => {
     editorRef.current = editor;
   };
 
-  // טיפול בעדכון קוד חיצוני תוך שמירה על מיקום הסמן
+  // שמירת מיקום הסמן בעת עדכון הקוד
   useEffect(() => {
-    if (editorRef.current && code !== localCode) {
+    if (editorRef.current) {
       const editor = editorRef.current;
-      const model = editor.getModel();
-
-      if (model) {
+      
+      // עדכן את הערך רק אם העורך כבר מוכן וזה לא הערך הראשון
+      const currentValue = editor.getValue();
+      if (currentValue !== code) {
         // שמירת מיקום הסמן הנוכחי
-        const selection = editor.getSelection();
         const position = editor.getPosition();
-
-        // בצע את העדכון בצורה יציבה יותר
-        model.setValue(code);
-
-        // החזר את הסמן למיקום המקורי אם אפשרי
+        
+        // עדכון הקוד
+        editor.setValue(code);
+        
+        // החזרת הסמן למיקום המקורי (אם העורך אינו לקריאה בלבד)
         if (position && !readOnly) {
-          editor.setPosition(position);
-          if (selection) {
-            editor.setSelection(selection);
-          }
+          setTimeout(() => {
+            editor.setPosition(position);
+            editor.focus();
+          }, 0);
         }
-
-        setLocalCode(code);
       }
     }
   }, [code, readOnly]);
 
   // טיפול בשינויים בעורך
   const handleEditorChange = (value) => {
-    if (value !== localCode) {
-      setLocalCode(value);
-      onChange(value);
-    }
+    onChange(value);
   };
 
   return (
@@ -50,7 +44,7 @@ const CodeEditor = ({ code, onChange, readOnly = false }) => {
       <Editor
         height="100%"
         defaultLanguage="javascript"
-        value={localCode}
+        value={code}
         onChange={handleEditorChange}
         onMount={handleEditorDidMount}
         options={{
@@ -65,11 +59,9 @@ const CodeEditor = ({ code, onChange, readOnly = false }) => {
             vertical: 'visible',
             horizontal: 'visible'
           },
-          // הוספת אפשרויות לשיפור חווית ההקלדה
-          quickSuggestions: true,
-          snippetSuggestions: 'top',
-          acceptSuggestionOnCommitCharacter: true,
-          acceptSuggestionOnEnter: 'on'
+          quickSuggestions: false,  // ביטול הצעות קוד אוטומטיות
+          cursorSmoothCaretAnimation: true,  // אנימציה חלקה יותר של הסמן
+          smoothScrolling: true  // גלילה חלקה
         }}
       />
     </div>
